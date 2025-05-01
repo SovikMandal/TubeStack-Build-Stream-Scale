@@ -10,7 +10,6 @@ const registerUser = asyncHandler( async (req, res) => {
 // get user details from frontend
 
     const {fullName, username, email, password} = req.body;
-    console.log("email", email);
 
 // validation - not empty
 
@@ -21,16 +20,14 @@ const registerUser = asyncHandler( async (req, res) => {
     */
 
     if (
-        [fullName, email, username, password].some((filed) => {
-            return filed ?.trim() === ""
-        })
+        [fullName, email, username, password].some((filed) => filed?.trim() === "")
     ) {
         throw new apiError(400, "All fields are required");
     }
 
 // check if user already exit - check username or email
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{ username }, { email }]
     })
 
@@ -38,10 +35,17 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new apiError(409, "User wthi email or username already exist")
     }
 
+    // console.log(req.files)
+
 // check for images, check for avatar
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLoaclPath = req.files?.coverImage[0]?.path;
+    // const coverImageLoaclPath = req.files?.coverImage[0]?.path;
+
+    let coverImageLoaclPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLoaclPath = req.files.coverImage[0].path
+    }
 
     if(!avatarLocalPath) {
         throw new apiError(400, "Avatar file is required")
@@ -64,7 +68,7 @@ const registerUser = asyncHandler( async (req, res) => {
         coverImage: coverImage?.url || "",
         email,
         password,
-        username: username.toLowercases()
+        username: username,
     })
 
     const createdUser = await User.findById(user._id).select(
@@ -74,7 +78,7 @@ const registerUser = asyncHandler( async (req, res) => {
 // check user creation
 
     if(!createdUser) {
-        throw new apiError(500, "Somthing went wrong while registering the user.");
+        throw new apiError(500, "Something went wrong while registering the user.");
     }
 
 // response return
@@ -82,7 +86,7 @@ const registerUser = asyncHandler( async (req, res) => {
     return res.status(201).json(
         new apiResponse(200, createdUser, "User regiser successfully.")
     )
-    
+
 })
 
 export default registerUser;
